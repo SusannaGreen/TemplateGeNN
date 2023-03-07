@@ -34,62 +34,72 @@ def to_np(x):
 class NeuralNetwork(torch.nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
-        self.linear0 = torch.nn.Linear(4, 175)
-        self.linear1 = torch.nn.Linear(175, 97)
-        self.linear2 = torch.nn.Linear(97, 46)
-        self.linear_out = torch.nn.Linear(46, 1)
+        self.linear0 = torch.nn.Linear(8, 275)
+        self.linear1 = torch.nn.Linear(275, 210)
+        self.linear2 = torch.nn.Linear(210, 248)
+        self.linear3 = torch.nn.Linear(248, 76)
+        self.linear_out = torch.nn.Linear(76, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = torch.nn.functional.relu(self.linear0(x))
         x = torch.nn.functional.relu(self.linear1(x))
         x = torch.nn.functional.relu(self.linear2(x))
+        x = torch.sigmoid(self.linear3(x))
         x = self.linear_out(x)
         return x
 
 #Upload the already trained weights and bias
 model = NeuralNetwork().to(device)
-model.load_state_dict(torch.load('spin_model.pth', map_location=device))
+model.load_state_dict(torch.load('saved_model_150.pth', map_location=device))
 model.eval()
 
 #for i in range(1000000):
 @torch.jit.script
 def make_template_bank(num_temp):
-    TemplateBank = torch.tensor([[0, 0]], device='cuda') 
+    TemplateBank = torch.tensor([[0, 0, 0, 0]], device='cuda') 
     while TemplateBank.size()[0] < num_temp:
         rows, columns = TemplateBank.size()
         num_1 = torch.tensor([-1.74, -1.74], device='cuda')
         num_2 = torch.tensor([3.47, 3.47], device='cuda')
         ref_mass = torch.rand(2, device='cuda').multiply(num_2).add(num_1) #(r1 - r2) * torch.rand(a, b) + r2
-        large_ref_mass = ref_mass.expand(rows, 2)
-        x_data =  torch.cat((large_ref_mass, TemplateBank), 1)
+        #large_ref_mass = ref_mass.expand(rows, 2)
+        num_3 = torch.tensor([2, 2], device='cuda')
+        num_4 = torch.tensor([-1, -1], device='cuda')
+        ref_spin = torch.rand(2, device='cuda').multiply(num_3).add(num_4)
+        ref_parameters = torch.cat((ref_mass, ref_spin), 0)
+        ref_parameters = torch.reshape(ref_parameters, (1,-1))
+        large_ref_parameters = ref_parameters.expand(rows, 4)
+        #print(to_np(large_ref_spin))
+        #ref_parameters = torch.cat((large_ref_parameters, large_ref_spin), 1)
+        #print(to_np(ref_parameters))
+        x_data =  torch.cat((large_ref_parameters, TemplateBank), 1)
         match = model(x_data) 
             
         if torch.max(match) < 0.97:
-            TemplateBank = torch.cat((ref_mass.expand(1, 2), TemplateBank))
+            TemplateBank = torch.cat((ref_parameters, TemplateBank), 0)
     return TemplateBank
 
 #Template Bank Generation
 start_time = time.time()
-TemplateBank = make_template_bank(100)        
+TemplateBank = make_template_bank(10000)        
 end_time = time.time()
 
-print("Total time taken", end_time - start_time)
+print("Total time taken to generate a TemplateGeNN", end_time - start_time)
 print("Size of the template bank", len(TemplateBank))
 
 TemplateBank = to_np(TemplateBank)
 
 rescaled_mass_1 = rescaling_the_mass(TemplateBank[:, 0])
 rescaled_mass_2 = rescaling_the_mass(TemplateBank[:, 1])
+spin1 = TemplateBank[:, 2]
+spin2 = TemplateBank[:, 3]
 
-mass_1_list = []
-mass_2_list = []
-for m1, m2 in zip(rescaled_mass_1, rescaled_mass_2): 
-        mass_1, mass_2 = sorting_the_mass(m1, m2)
-        mass_1_list.append(mass_1)
-        mass_2_list.append(mass_2) 
+MassSpinBank = []
+for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2): 
+        mass1, mass2 = sorting_the_mass(m1, m2)
+        MassSpinBank.append([mass1, mass2, s1, s2])
+ 
+TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
+TemplateBank.to_csv('MassSpinTemplateBank.csv', index = False)
 
-plt.scatter(mass_1_list, mass_2_list, color='#5B2C6F')
-#plt.scatter(to_np(TemplateBank[:, 0]), to_np(TemplateBank[:, 1]), color='#5B2C6F')
-plt.xlabel('Mass 1')
-plt.ylabel('Mass 2')
-plt.savefig('template_bank_gpu_spin.pdf', dpi=300)
+#matplotlib.rcParams.update({'font.size': 14})
