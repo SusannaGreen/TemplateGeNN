@@ -2,9 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import time
-import matplotlib
-matplotlib.rcParams.update({'font.size': 14})
-import matplotlib.pyplot as plt
+import h5py
 
 import torch
 import torch.nn as nn
@@ -62,16 +60,12 @@ def make_template_bank(num_temp):
         num_1 = torch.tensor([-1.74, -1.74], device='cuda')
         num_2 = torch.tensor([3.47, 3.47], device='cuda')
         ref_mass = torch.rand(2, device='cuda').multiply(num_2).add(num_1) #(r1 - r2) * torch.rand(a, b) + r2
-        #large_ref_mass = ref_mass.expand(rows, 2)
         num_3 = torch.tensor([2, 2], device='cuda')
         num_4 = torch.tensor([-1, -1], device='cuda')
         ref_spin = torch.rand(2, device='cuda').multiply(num_3).add(num_4)
         ref_parameters = torch.cat((ref_mass, ref_spin), 0)
         ref_parameters = torch.reshape(ref_parameters, (1,-1))
         large_ref_parameters = ref_parameters.expand(rows, 4)
-        #print(to_np(large_ref_spin))
-        #ref_parameters = torch.cat((large_ref_parameters, large_ref_spin), 1)
-        #print(to_np(ref_parameters))
         x_data =  torch.cat((large_ref_parameters, TemplateBank), 1)
         match = model(x_data) 
             
@@ -81,7 +75,7 @@ def make_template_bank(num_temp):
 
 #Template Bank Generation
 start_time = time.time()
-TemplateBank = make_template_bank(10000)        
+TemplateBank = make_template_bank(torch.tensor(1000))        
 end_time = time.time()
 
 print("Total time taken to generate a TemplateGeNN", end_time - start_time)
@@ -94,12 +88,25 @@ rescaled_mass_2 = rescaling_the_mass(TemplateBank[:, 1])
 spin1 = TemplateBank[:, 2]
 spin2 = TemplateBank[:, 3]
 
-MassSpinBank = []
+#Getting the Data in the file format required to generate a hdf file
+mass1=[]
+mass2=[]
+spin1z=[]
+spin2z=[]
+MassSpinBank=[]
 for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2): 
-        mass1, mass2 = sorting_the_mass(m1, m2)
-        MassSpinBank.append([mass1, mass2, s1, s2])
- 
-TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
-TemplateBank.to_csv('MassSpinTemplateBank.csv', index = False)
+        m1, m2 = sorting_the_mass(m1, m2)
+        mass1.append(m1)
+        mass2.append(m2)
+        spin1z.append(s1)
+        spin2z.append(s2)
+        MassSpinBank.append([m1, m2, s1, s2])
 
-#matplotlib.rcParams.update({'font.size': 14})
+with h5py.File('100MassSpinTemplateBank.hdf','w') as f_out:
+    f_out['mass1'] = mass1
+    f_out['mass2'] = mass2
+    f_out['spin1z'] = spin1z
+    f_out['spin2z'] = spin2z
+
+TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
+TemplateBank.to_csv('100MassSpinTemplateBank.csv', index = False)
