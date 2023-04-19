@@ -2,15 +2,15 @@
 
 # Copyright (C) 2023 Susanna M. Green, Andrew Lundgren, and Xan Morice-Atkinson 
 
-import os
+from Model import NeuralNetwork
+
 import numpy as np
 import pandas as pd
 import time
-import time
-import logging 
-import matplotlib
-matplotlib.rcParams.update({'font.size': 14})
-import matplotlib.pyplot as plt
+import logging
+
+from sklearn import preprocessing
+from joblib import load
 
 import torch
 import torch.nn as nn
@@ -29,7 +29,7 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler) # add file handler to logger
 
 #Define directory for the input and output files 
-DATA_DIR = '/users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParameters/'
+DATA_DIR = '/users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParamters/'
 
 #Define input location on the the training data 
 TRAINING_DATASET = DATA_DIR+'1000000MassSpinTrainingDataset.csv'
@@ -54,16 +54,14 @@ def sorting_the_mass(m1, m2):
         return m2, m1
 
 def scaling_the_mass(mass, scaler_mean, scaler_std):
-    scaled_mass = (mass - scaler_mean)/ np.sqrt(scaler_std)
-    return scaled_mass
+    return (mass - mean)/ np.sqrt(std)
 
-def rescaling_the_mass(mass, scaler_mean, scaler_std):
-    rescaled_mass = mass* np.sqrt(scaler_std) + scaler_mean
-    return rescaled_mass
-    
+def rescaling_the_mass(mass, mean, std):
+    return mass* np.sqrt(std) + mean  
+
 def to_np(x):
     return x.cpu().detach().numpy()
-
+    
 #Check that Pytorch recognises there is a GPU available
 device = "cuda" if torch.cuda.is_available() else "cpu"
 logger.info(f"Using {device} device")
@@ -87,22 +85,23 @@ logger.info(f'IMPORTANT: The minimum scaled mass is {mimimum_mass}')
 logger.info(f'IMPORTANT: The maximum scaled mass is {maximum_mass}')
 
 #Upload the already trained weights and bias
+logger.info("Loading the LearningMatch model")
 model = NeuralNetwork().to(device)
 model.load_state_dict(torch.load(LEARNINGMATCH_MODEL, map_location=device))
 model.eval()
 
 #for i in range(1000000):
 @torch.jit.script
-def make_template_bank(num_temp):
+def make_template_bank(num_temp: int, min_mass: float, max_mass: float):
     TemplateBank = torch.tensor([[0, 0, 0, 0]], device='cuda') 
     while TemplateBank.size()[0] < num_temp:
         rows, columns = TemplateBank.size()
-        num_1 = torch.tensor([-1.74, -1.74], device='cuda')
-        num_2 = torch.tensor([3.47, 3.47], device='cuda')
+        num_1 = torch.tensor([min_mass, min_mass], device='cuda')
+        num_2 = torch.tensor([max_mass, max_mass], device='cuda')
         ref_mass = torch.rand(2, device='cuda').multiply(num_2).add(num_1) #(r1 - r2) * torch.rand(a, b) + r2
-        num_3 = torch.tensor([2, 2], device='cuda')
+        num_3 = torch.tensor([1, 1], device='cuda')
         num_4 = torch.tensor([-1, -1], device='cuda')
-        ref_spin = torch.rand(2, device='cuda').multiply(num_3).add(num_4)
+        ref_spin = torch.rand(2, device='cuda').multiply(num_3).add(num_4) #(r1 - r2) * torch.rand(a, b) + r2
         ref_parameters = torch.cat((ref_mass, ref_spin), 0)
         ref_parameters = torch.reshape(ref_parameters, (1,-1))
         large_ref_parameters = ref_parameters.expand(rows, 4)
@@ -114,29 +113,30 @@ def make_template_bank(num_temp):
     return TemplateBank
 
 #Template Bank Generation
+logger.info("Generating the Template Bank using TemplateGeNN") 
 start_time = time.time()
-TemplateBank = make_template_bank(torch.tensor(SIZE))        
+TemplateBank = make_template_bank(SIZE, mimimum_mass, maximum_mass)        
 end_time = time.time()
+
+TemplateBank = to_np(TemplateBank)
 
 logger.info("Total time taken to generate a TemplateGeNN  %s", end_time - start_time)
 logger.info("Size of the template bank  %s", len(TemplateBank))
 
-TemplateBank = to_np(TemplateBank)
-
 logger.info("Rescaling the mass")
-rescaled_mass_1 = rescaling_the_mass(TemplateBank[:, 0])
-rescaled_mass_2 = rescaling_the_mass(TemplateBank[:, 1])
+rescaled_mass_1 = rescaling_the_mass(TemplateBank[:, 0],  scaler_mean, scaler_std)
+rescaled_mass_2 = rescaling_the_mass(TemplateBank[:, 1],  scaler_mean, scaler_std)
 spin1 = TemplateBank[:, 2]
 spin2 = TemplateBank[:, 3]
 
 #Convert the template bank into the desired file format
-logger.info("Converting the template bank to a hdf5 file"
+logger.info("Converting the template bank to a hdf5 file")
 
 mass1=[]
 mass2=[]
 spin1z=[]
 spin2z=[]
-#MassSpinBank=[]
+MassSpinBank=[]
 
 for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2): 
         m1, m2 = sorting_the_mass(m1, m2)
@@ -144,7 +144,7 @@ for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2):
         mass2.append(m2)
         spin1z.append(s1)
         spin2z.append(s2)
-#       MassSpinBank.append([m1, m2, s1, s2]) Needed for the csv file format 
+        MassSpinBank.append([m1, m2, s1, s2]) #Needed for the csv file format 
 
 with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['mass1'] = mass1
@@ -152,9 +152,9 @@ with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['spin1z'] = spin1z
     f_out['spin2z'] = spin2z
 
-#logger.info("Converting the template bank to a csv file"
-#TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
-#TemplateBank.to_csv('MassSpinTemplateBank.csv', index = False)
+logger.info("Converting the template bank to a csv file")
+TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
+TemplateBank.to_csv('MassSpinTemplateBank.csv', index = False)
 
 #logger.info("Converting the template bank to a xml file")
 #my_bank = zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2)

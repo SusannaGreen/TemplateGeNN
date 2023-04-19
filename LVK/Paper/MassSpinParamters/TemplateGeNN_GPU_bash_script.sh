@@ -20,5 +20,5 @@ source activate /users/sgreen/.conda/envs/PyCBCandPytorch2
 echo `conda info`
 echo `which python`
 
-cd /users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParameters/
+cd /users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParamters/
 python GPU.py

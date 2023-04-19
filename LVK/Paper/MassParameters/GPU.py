@@ -84,9 +84,6 @@ maximum_mass = float(np.mean(TrainingBank.max().values))
 logger.info(f'IMPORTANT: The minimum scaled mass is {mimimum_mass}')
 logger.info(f'IMPORTANT: The maximum scaled mass is {maximum_mass}')
 
-#mimimum_mass = torch.tensor(mimimum_mass)
-#maximum_mass = torch.tensor(maximum_mass)
-
 #Upload the already trained weights and bias
 logger.info("Loading the LearningMatch model")
 model = NeuralNetwork().to(device)
@@ -129,21 +126,21 @@ logger.info("Converting the template bank to a hdf5 file")
 
 mass1=[]
 mass2=[]
-#MassBank=[]
+MassBank=[]
 
 for m1, m2 in zip(rescaled_mass_1, rescaled_mass_2): 
         m1, m2 = sorting_the_mass(m1, m2)
         mass1.append(m1)
         mass2.append(m2)
-#       MassBank.append([m1, m2]) Needed for the csv file format 
+       MassBank.append([m1, m2]) #Needed for the csv file format 
 
 with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['mass1'] = mass1
     f_out['mass2'] = mass2
 
-#logger.info("Converting the template bank to a csv file"
-#TemplateBank =  pd.DataFrame(data=(MassBank), columns=['mass1', 'mass2'])
-#TemplateBank.to_csv('MassTemplateBank.csv', index = False)
+logger.info("Converting the template bank to a csv file")
+TemplateBank =  pd.DataFrame(data=(MassBank), columns=['mass1', 'mass2'])
+TemplateBank.to_csv('MassTemplateBank.csv', index = False)
 
 #logger.info("Converting the template bank to a xml file")
 #my_bank = zip(rescaled_mass_1, rescaled_mass_2)

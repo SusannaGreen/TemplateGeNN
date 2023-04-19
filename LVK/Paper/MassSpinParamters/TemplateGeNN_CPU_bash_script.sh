@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --nodes=6
+#SBATCH --nodes=1
 #SBATCH --job-name=TempGeNN
 #SBATCH -p sciama4.q
 #SBATCH --ntasks=16
@@ -20,4 +20,4 @@ echo `conda info`
 echo `which python`
 
 cd /users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParameters/
-python CPU.py
+python Plots.py
