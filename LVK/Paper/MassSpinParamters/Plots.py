@@ -22,8 +22,8 @@ matplotlib.rcParams.update({'font.size': 20})
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
-import plotly
-import plotly_express as px
+#import plotly
+#import plotly_express as px
 
 #Set-up the logging 
 logger = logging.getLogger(__name__)  

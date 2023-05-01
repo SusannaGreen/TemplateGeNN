@@ -15,10 +15,10 @@ module purge
 module load system
 module load anaconda3/2022.10
 
-source activate /users/sgreen/.conda/envs/PyCBCandPytorch2
+source activate /mnt/lustre/shared_conda/envs/sgreen/PyCBCandPytorch2
 
 echo `conda info`
 echo `which python`
 
 cd /users/sgreen/TemplateGeNN/LVK/Paper/MassSpinParamters/
-python GPU.py
+python RejectionRate.py

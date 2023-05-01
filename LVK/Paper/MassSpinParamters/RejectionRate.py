@@ -23,7 +23,7 @@ from pycbc.pnutils import get_imr_duration
 logger = logging.getLogger(__name__)  
 logger.setLevel(logging.INFO) # set log level 
 
-file_handler = logging.FileHandler('GPU.log') # define file handler and set formatter
+file_handler = logging.FileHandler('ReactionRate.log') # define file handler and set formatter
 formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 file_handler.setFormatter(formatter)
 
@@ -42,10 +42,10 @@ STANDARD_SCALER = DATA_DIR+'StandardScaler.bin'
 LEARNINGMATCH_MODEL = DATA_DIR+'LearningMatchModel.pth'
 
 #Define ouput location of the template bank
-TEMPLATE_BANK = DATA_DIR+'MassSpinTemplateBank.hdf'
+TEMPLATE_BANK = DATA_DIR+'3000000MassSpinTemplateBank.hdf'
 
 #Define the size of the template bank
-SIZE = 100
+SIZE = 300000
 
 #Define functions
 def sorting_the_mass(m1, m2):
@@ -90,11 +90,15 @@ logger.info("Loading the LearningMatch model")
 model = NeuralNetwork().to(device)
 model.load_state_dict(torch.load(LEARNINGMATCH_MODEL, map_location=device))
 model.eval()
+compiled_model = torch.compile(model)
 
 #for i in range(1000000):
 @torch.jit.script
-def make_template_bank(num_temp: int, min_mass: float, max_mass: float):
+def make_template_bank(num_temp: int, min_mass: float, max_mass: float): 
     TemplateBank = torch.tensor([[0, 0, 0, 0]], device='cuda') 
+    acceptance_tensor = torch.tensor([[-1]], device='cuda') 
+    acceptance = 0
+    count = 0 
     while TemplateBank.size()[0] < num_temp:
         rows, columns = TemplateBank.size()
         num_1 = torch.tensor([min_mass, min_mass], device='cuda') #r1
@@ -107,21 +111,34 @@ def make_template_bank(num_temp: int, min_mass: float, max_mass: float):
         ref_parameters = torch.reshape(ref_parameters, (1,-1))
         large_ref_parameters = ref_parameters.expand(rows, 4)
         x_data =  torch.cat((large_ref_parameters, TemplateBank), 1)
-        match = model(x_data) 
+        match = compiled_model(x_data) 
             
         if torch.max(match) < 0.97:
             TemplateBank = torch.cat((ref_parameters, TemplateBank), 0)
-    return TemplateBank
+            acceptance += 1
+
+        count += 1
+
+        if count%100==0:
+            acceptance_tensor_100 = torch.tensor([[acceptance]], device='cuda') 
+            acceptance_tensor = torch.cat((acceptance_tensor, acceptance_tensor_100),0)
+
+            if acceptance < 5:
+                break
+
+            acceptance=0
+
+    return TemplateBank, acceptance_tensor
 
 #Template Bank Generation
 logger.info("Generating the Template Bank using TemplateGeNN") 
 start_time = time.time()
-TemplateBank = make_template_bank(SIZE, mimimum_mass, maximum_mass)        
+TemplateBank, RejectionRate = make_template_bank(SIZE, mimimum_mass, maximum_mass)        
 end_time = time.time()
 
 TemplateBank = to_np(TemplateBank)
 
-logger.info("Total time taken to generate a TemplateGeNN  %s", end_time - start_time)
+logger.info("Total time taken to generate a TemplateGeNN Template Bank is %s", end_time - start_time)
 logger.info("Size of the template bank  %s", len(TemplateBank))
 
 logger.info("Rescaling the mass")
@@ -147,6 +164,10 @@ for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2):
         spin2z.append(s2)
         MassSpinBank.append([m1, m2, s1, s2]) #Needed for the csv file format 
 
+logger.info("Converting the template bank to a csv file")
+TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
+TemplateBank.to_csv('3000000MassSpinTemplateBank.csv', index = False)
+
 with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['approximant'] = ['IMRPhenomXAS']*len(mass1)
     f_out['f_lower'] = np.ones_like(mass1)*12
@@ -156,10 +177,8 @@ with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['spin2z'] = spin2z
     f_out['template_duration'] = get_imr_duration(np.array([mass1]), np.array([mass2]), np.array([spin1z]), np.array([spin2z]), np.ones_like(mass1)*12, approximant='IMRPhenomD')
 
-logger.info("Converting the template bank to a csv file")
-TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
-TemplateBank.to_csv('MassSpinTemplateBank.csv', index = False)
-
+acceptance_int = to_np(acceptance_tensor)
+logger.info("Size of the template bank  %s", acceptance_int)
 #logger.info("Converting the template bank to a xml file")
 #my_bank = zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2)
 #output_sngl_inspiral_table('MassSpinTemplateBank.xml', my_bank, None, None)

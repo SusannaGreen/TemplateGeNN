@@ -44,7 +44,7 @@ LEARNINGMATCH_MODEL = DATA_DIR+'LearningMatchModel.pth'
 TEMPLATE_BANK = DATA_DIR+'MassTemplateBank.hdf'
 
 #Define the size of the template bank
-SIZE = 10000
+SIZE = 1000000
 
 #Define functions
 def sorting_the_mass(m1, m2):
@@ -132,7 +132,7 @@ for m1, m2 in zip(rescaled_mass_1, rescaled_mass_2):
         m1, m2 = sorting_the_mass(m1, m2)
         mass1.append(m1)
         mass2.append(m2)
-       MassBank.append([m1, m2]) #Needed for the csv file format 
+        MassBank.append([m1, m2]) #Needed for the csv file format 
 
 with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['mass1'] = mass1
