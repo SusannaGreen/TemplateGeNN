@@ -15,4 +15,7 @@ for m1, m2, s1, s2 in zip(TemplateBank.mass1.values, TemplateBank.mass2.values, 
 TemplateBank['chi_eff'] = chi_eff
 
 fig = px.scatter_3d(TemplateBank, x='mass1', y='mass2', z='chi_eff')
-fig.write_html("100TemplateBank.html")
+fig.write_html("New100TemplateBank.html", include_plotlyjs='cdn')
+
+#Lambda and chi_eff
+#mass 1 and mass2

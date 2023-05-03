@@ -23,7 +23,7 @@ from pycbc.pnutils import get_imr_duration
 logger = logging.getLogger(__name__)  
 logger.setLevel(logging.INFO) # set log level 
 
-file_handler = logging.FileHandler('ReactionRate.log') # define file handler and set formatter
+file_handler = logging.FileHandler('TemplateGeNN.log') # define file handler and set formatter
 formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 file_handler.setFormatter(formatter)
 
@@ -42,7 +42,9 @@ STANDARD_SCALER = DATA_DIR+'StandardScaler.bin'
 LEARNINGMATCH_MODEL = DATA_DIR+'LearningMatchModel.pth'
 
 #Define ouput location of the template bank
-TEMPLATE_BANK = DATA_DIR+'3000000MassSpinTemplateBank.hdf'
+TEMPLATE_BANK_HDF = DATA_DIR+'New3000000MassSpinTemplateBank.hdf'
+TEMPLATE_BANK_CSV = DATA_DIR+'New3000000MassSpinTemplateBank.csv'
+ACCEPTANCE_RATE_CSV = DATA_DIR+'New3000000MassSpinTemplateBankAcceptanceRate.csv'
 
 #Define the size of the template bank
 SIZE = 300000
@@ -55,10 +57,10 @@ def sorting_the_mass(m1, m2):
         return m2, m1
 
 def scaling_the_mass(mass, scaler_mean, scaler_std):
-    return (mass - mean)/ np.sqrt(std)
+    return (mass - mean)/np.sqrt(std)
 
-def rescaling_the_mass(mass, mean, std):
-    return mass* np.sqrt(std) + mean  
+def rescaling_the_mass(scaled_mass, mean, std):
+    return (scaled_mass*np.sqrt(std)) + mean  
 
 def to_np(x):
     return x.cpu().detach().numpy()
@@ -77,11 +79,14 @@ logger.info(f'IMPORTANT: The average standard deviation of the standard scaler i
 
 #Loading the training dataset to determine the minimum and maximum range
 logger.info("Reading in the training data")
-TrainingBank = pd.read_csv(TRAINING_DATASET)
+TrainingDataset = pd.read_csv(TRAINING_DATASET)
 logger.info("Scaling the training data")
-TrainingBank[['ref_mass1', 'ref_mass2', 'mass1', 'mass2']] = scaler.transform(TrainingBank[['ref_mass1', 'ref_mass2', 'mass1', 'mass2']])
-mimimum_mass = float(np.mean(TrainingBank.min().values))
-maximum_mass = float(np.mean(TrainingBank.max().values))
+TrainingDataset[['ref_mass1', 'ref_mass2', 'mass1', 'mass2']] = scaler.transform(TrainingDataset[['ref_mass1', 'ref_mass2', 'mass1', 'mass2']])
+
+logger.info("Calculating the minimum and maximum scaled mass values")
+ScaledMassDataset = TrainingDataset[['ref_mass1', 'ref_mass2', 'mass1', 'mass2']].copy()
+mimimum_mass = float(np.mean(ScaledMassDataset.min().values)) 
+maximum_mass = float(np.mean(ScaledMassDataset.max().values))
 logger.info(f'IMPORTANT: The minimum scaled mass is {mimimum_mass}')
 logger.info(f'IMPORTANT: The maximum scaled mass is {maximum_mass}')
 
@@ -123,7 +128,7 @@ def make_template_bank(num_temp: int, min_mass: float, max_mass: float):
             acceptance_tensor_100 = torch.tensor([[acceptance]], device='cuda') 
             acceptance_tensor = torch.cat((acceptance_tensor, acceptance_tensor_100),0)
 
-            if acceptance < 5:
+            if acceptance < 1:
                 break
 
             acceptance=0
@@ -133,7 +138,7 @@ def make_template_bank(num_temp: int, min_mass: float, max_mass: float):
 #Template Bank Generation
 logger.info("Generating the Template Bank using TemplateGeNN") 
 start_time = time.time()
-TemplateBank, RejectionRate = make_template_bank(SIZE, mimimum_mass, maximum_mass)        
+TemplateBank, acceptance_tensor = make_template_bank(SIZE, mimimum_mass, maximum_mass)        
 end_time = time.time()
 
 TemplateBank = to_np(TemplateBank)
@@ -166,9 +171,9 @@ for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2):
 
 logger.info("Converting the template bank to a csv file")
 TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
-TemplateBank.to_csv('3000000MassSpinTemplateBank.csv', index = False)
+TemplateBank.to_csv(TEMPLATE_BANK_CSV, index = False)
 
-with h5py.File(TEMPLATE_BANK,'w') as f_out:
+with h5py.File(TEMPLATE_BANK_HDF,'w') as f_out:
     f_out['approximant'] = ['IMRPhenomXAS']*len(mass1)
     f_out['f_lower'] = np.ones_like(mass1)*12
     f_out['mass1'] = mass1
@@ -177,8 +182,10 @@ with h5py.File(TEMPLATE_BANK,'w') as f_out:
     f_out['spin2z'] = spin2z
     f_out['template_duration'] = get_imr_duration(np.array([mass1]), np.array([mass2]), np.array([spin1z]), np.array([spin2z]), np.ones_like(mass1)*12, approximant='IMRPhenomD')
 
-acceptance_int = to_np(acceptance_tensor)
-logger.info("Size of the template bank  %s", acceptance_int)
+logger.info("Converting the Acceptance Rate to csv file")
+acceptance = to_np(acceptance_tensor)
+Acceptance =  pd.DataFrame(data=(acceptance), columns=['acceptance'])
+Acceptance.to_csv(ACCEPTANCE_RATE_CSV, index = False)
 #logger.info("Converting the template bank to a xml file")
 #my_bank = zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2)
 #output_sngl_inspiral_table('MassSpinTemplateBank.xml', my_bank, None, None)

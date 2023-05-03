@@ -7,6 +7,8 @@ import h5py
 import torch
 import torch.nn as nn
 
+from pycbc.tmpltbank.bank_output_utils import output_sngl_inspiral_table
+
 #Check that Pytorch recognises there is a GPU available
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using {device} device")
@@ -102,11 +104,14 @@ for m1, m2, s1, s2 in zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2):
         spin2z.append(s2)
         MassSpinBank.append([m1, m2, s1, s2])
 
-with h5py.File('100MassSpinTemplateBank.hdf','w') as f_out:
-    f_out['mass1'] = mass1
-    f_out['mass2'] = mass2
-    f_out['spin1z'] = spin1z
-    f_out['spin2z'] = spin2z
+#with h5py.File('100MassSpinTemplateBank.hdf','w') as f_out:
+#    f_out['mass1'] = mass1
+#    f_out['mass2'] = mass2
+#    f_out['spin1z'] = spin1z
+#    f_out['spin2z'] = spin2z
 
-TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
-TemplateBank.to_csv('100MassSpinTemplateBank.csv', index = False)
+#TemplateBank =  pd.DataFrame(data=(MassSpinBank), columns=['mass1', 'mass2', 'spin1', 'spin2'])
+#TemplateBank.to_csv('100MassSpinTemplateBank.csv', index = False)
+
+my_bank = zip(rescaled_mass_1, rescaled_mass_2, spin1, spin2)
+output_sngl_inspiral_table('LigoTemplateBank.xml', my_bank, None, None)
