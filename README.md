@@ -1,2 +1,2 @@
 # TemplateGeNN
-Generating gravitational wave template banks using neural networks
+Neural networks used to accelerate template bank generation.
