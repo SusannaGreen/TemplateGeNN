@@ -16,7 +16,7 @@ The TemplateGeNN repository conatins the following:
     b) PyCBCBankVerificatorSmall - A folder containing the inputs and outputs of PyCBC template bank verificator. This was used to verifiy the template bank in the low mass region, see paper for more details.
         1) aLIGO140MpcT1800545psd.txt - PSD used in PyCBC template bank verificator (input file).
         2) global_setup.ini - The setup file for PyCBC template bank verificator (input file).
-        3) H1L1V1-BANKSIM_MATCH_COMBINE_BROADINJ1-2620801-1163865616.h5 - The injectiosn used to test the template bank(output file).
+        3) H1L1V1-BANKSIM_MATCH_COMBINE_BROADINJ1-2620801-1163865616.h5 - The injectiosn used to test the template bank (output file).
         4) InvestigationSmall.ipynb - Jupyter Notebook used to create the graphs presented in the paper. 
 
     a) psd.ipynb - Notebook used to create the PSD required for PyCBC template bank verificator. 
@@ -29,5 +29,5 @@ The TemplateGeNN repository conatins the following:
 
 2) TemplateGeNN.py - An example python script used to generate a template bank with a LearningMatch model and GPUs. This needs a 'LearningMatchModel.pth' file and 'Model.py' file.
 
-3) Requirements.txt - Conatins information about the versions used to generate a template bank using TemplateGeNN.  
+3) Requirements.txt - Contains information about the versions used to generate a template bank using TemplateGeNN.  
 

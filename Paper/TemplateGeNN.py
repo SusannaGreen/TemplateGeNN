@@ -47,7 +47,6 @@ MAX_LAMBDA = (MIN_MCHIRP/REF_LAMBDA)**(-5/3)
 MIN_ETA = 0.1
 MAX_ETA = 0.249999
 
-#Define functions
 #Define the functions
 def lambda0_to_mchirp(lambda0):
     return (lambda0**(-3/5))*REF_LAMBDA
