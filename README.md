@@ -4,7 +4,7 @@ TemplateGeNN is a fast stochastic template bank generation algorithm which uses 
 In order to use TemplateGeNN please make sure you install the following key packages NumPy, Joblib, Typing, Pandas, PyTorch, h5py and PyCBC. See the `requirements.txt` for more information on versions. 
 
 The TemplateGeNN repository conatins the following:
-1) Paper - folder containing the 
+1) Paper - A folder containing the content used to create the results seen in the paper. 
 
 2) `TemplateGeNN.py` - An example python script used to generate a template bank with a LearningMatch model and GPUs. This needs a 'LearningMatchModel.pth' file and 'Model.py' file.
 
