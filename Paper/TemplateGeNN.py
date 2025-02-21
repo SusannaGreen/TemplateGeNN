@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2025 Susanna M. Green and Andrew P. Lundgren 
+# Copyright (C) 2025 Susanna M. Green and Andrew P. Lundgren
 from Model import NeuralNetwork
 
 import numpy as np
@@ -36,7 +36,6 @@ LEARNINGMATCH_MODEL = DATA_DIR+'LearningMatchModel.pth'
 #Define ouput location of the template bank
 TEMPLATE_BANK_HDF = DATA_DIR+'TemplateGeNN.hdf'
 TEMPLATE_BANK_CSV = DATA_DIR+'TemplateGeNN.csv'
-ACCEPTANCE_RATE_CSV = DATA_DIR+'TemplateGeNNAcceptance.csv'
 
 #Define the size of the template bank
 SIZE = 200000
@@ -82,8 +81,7 @@ model.load_state_dict(torch.load(LEARNINGMATCH_MODEL, map_location=device))
 model.eval()
 compiled_model = torch.compile(model)
 
-#for i in range(1000000):
-#@torch.jit.script
+@torch.jit.script
 def make_template_bank(num_temp: int, min_lambda: float, max_lambda: float, min_eta: float, max_eta: float): 
     TemplateBank = torch.tensor([[0, 0, 0, 0]], device='cuda') 
     acceptance_tensor = torch.tensor([[-1]], device='cuda') 
@@ -109,21 +107,18 @@ def make_template_bank(num_temp: int, min_lambda: float, max_lambda: float, min_
 
         count += 1
 
-        if count%10000==0:
-            acceptance_tensor_100 = torch.tensor([[acceptance]], device='cuda') 
-            acceptance_tensor = torch.cat((acceptance_tensor, acceptance_tensor_100),0)
-    
-            if acceptance == 1:
+        if count%1000==0:
+            if acceptance == 0:
                 break
 
             acceptance=0
 
-    return TemplateBank, acceptance_tensor
+    return TemplateBank
 
 #Template Bank Generation
 logger.info("Generating the Template Bank using TemplateGeNN") 
 start_time = time.time()
-TemplateBank, acceptance_tensor = make_template_bank(SIZE, MIN_LAMBDA, MAX_LAMBDA, MIN_ETA, MAX_ETA)        
+TemplateBank = make_template_bank(SIZE, MIN_LAMBDA, MAX_LAMBDA, MIN_ETA, MAX_ETA)        
 end_time = time.time()
 
 TemplateBank = to_np(TemplateBank)
@@ -180,8 +175,3 @@ with h5py.File(TEMPLATE_BANK_HDF,'w') as f_out:
     f_out['spin1z'] = spin1
     f_out['spin2z'] = spin2
     f_out['template_duration'] = get_imr_duration(np.array([mass1]), np.array([mass2]), np.array([spin1]), np.array([spin2]), np.ones_like(mass1)*12, approximant='IMRPhenomD')
-
-logger.info("Converting the Acceptance Rate to csv file")
-acceptance = to_np(acceptance_tensor)
-Acceptance =  pd.DataFrame(data=(acceptance), columns=['acceptance'])
-Acceptance.to_csv(ACCEPTANCE_RATE_CSV, index = False)

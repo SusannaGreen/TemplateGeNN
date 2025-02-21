@@ -1,3 +1,11 @@
-2024-12-03 14:35:30,469 : INFO : __main__ : Using cuda device
-2024-12-03 14:35:30,469 : INFO : __main__ : Loading the LearningMatch model
-2024-12-03 14:35:54,586 : INFO : __main__ : Generating the Template Bank using TemplateGeNN
+2024-12-09 09:48:58,331 : INFO : __main__ : Using cuda device
+2024-12-09 09:48:58,331 : INFO : __main__ : Loading the LearningMatch model
+2024-12-09 09:49:35,866 : INFO : __main__ : Generating the Template Bank using TemplateGeNN
+2024-12-17 17:22:02,975 : INFO : __main__ : Using cuda device
+2024-12-17 17:22:02,975 : INFO : __main__ : Loading the LearningMatch model
+2024-12-17 17:22:21,282 : INFO : __main__ : Generating the Template Bank using TemplateGeNN
+2024-12-18 22:39:11,393 : INFO : __main__ : Total time taken to generate a TemplateGeNN Template Bank is 105409.60218167305
+2024-12-18 22:39:11,540 : INFO : __main__ : Size of the template bank  31640
+2024-12-18 22:39:11,540 : INFO : __main__ : Rescaling the mass
+2024-12-18 22:39:11,778 : INFO : __main__ : Converting the template bank to a hdf5 file
+2024-12-18 22:39:15,768 : INFO : __main__ : Converting the template bank to a csv file

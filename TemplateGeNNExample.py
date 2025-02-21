@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2025 Susanna M. Green and Andrew P. Lundgren
+# Copyright (C) 2025 Susanna M. Green and Andrew P. Lundgren 
 from Model import NeuralNetwork
 
 import numpy as np
@@ -21,21 +21,21 @@ from pycbc.conversions import mass1_from_mchirp_eta, mass2_from_mchirp_eta
 logger = logging.getLogger(__name__)  
 logger.setLevel(logging.INFO) # set log level 
 
-file_handler = logging.FileHandler('TemplateGeNNFast.log') # define file handler and set formatter
+file_handler = logging.FileHandler('TemplateGeNN.log') # define file handler and set formatter
 formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 file_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler) # add file handler to logger
 
 #Define directory for the input and output files 
-DATA_DIR = '/users/sgreen/TemplateGeNN/LVK/Paper/'
+DATA_DIR = ''
 
 #Define input location of the LearningMatch model
 LEARNINGMATCH_MODEL = DATA_DIR+'LearningMatchModel.pth'
 
 #Define ouput location of the template bank
-TEMPLATE_BANK_HDF = DATA_DIR+'TemplateGeNNFast.hdf'
-TEMPLATE_BANK_CSV = DATA_DIR+'TemplateGeNNFast.csv'
+TEMPLATE_BANK_HDF = DATA_DIR+'TemplateGeNN.hdf'
+TEMPLATE_BANK_CSV = DATA_DIR+'TemplateGeNN.csv'
 
 #Define the size of the template bank
 SIZE = 200000
