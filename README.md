@@ -6,7 +6,7 @@ In order to use TemplateGeNN please make sure you install the following key pack
 The TemplateGeNN repository conatins the following:
 1) Paper - A folder containing the content used to create the results seen in the paper. 
 
-2) `TemplateGeNN.py` - An example python script used to generate a template bank with a LearningMatch model and GPUs. This needs a 'LearningMatchModel.pth' file and 'Model.py' file.
+2) `TemplateGeNNExample.py` - An example python script used to generate a template bank with a LearningMatch model and GPUs. This needs a 'LearningMatchModel.pth' file and 'Model.py' file.
 
 3) `requirements.txt` - Contains information about the versions used to generate a template bank using TemplateGeNN.  
 
